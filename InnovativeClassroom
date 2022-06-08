@@ -1,0 +1,322 @@
+library(shiny)
+library(shinydashboard)
+library(plotly)
+library(dplyr)
+library(tidyLPA)
+library(googlesheets4)
+library(DT)
+library(rsconnect)
+
+ui <- dashboardPage(
+    dashboardHeader(title = "Innovative Classroom", titleWidth = 300),
+    ## Sidebar content
+    dashboardSidebar(width = 300,
+                     sidebarMenu(
+                         menuItem("คำชี้แจง", tabName = "explain", icon = icon("bullhorn")),
+                         menuItem("แบบสอบถาม", tabName = "survey", icon = icon("pen")),
+                         menuItem("ผลการวิเคราะห์", tabName = "analyze", icon = icon("chart-bar")),
+                         menuItem("แหล่งเรียนรู้", tabName = "resource", icon = icon("file")),
+                         menuItem("ประเมินผลการใช้งาน", tabName = "evaluate", icon = icon("clipboard-check"))
+                     )
+    ),
+    ## Body content
+    dashboardBody(
+        tags$head( 
+            tags$style(HTML(".main-sidebar { font-size: 20px;}")) #change the font size to 20
+        ),
+        tabItems(
+            # First tab content
+            tabItem(tabName = "explain",
+                    fluidPage(
+                        h2("แอปพลิเคชันส่งเสริมความเป็นชั้นเรียนนวัตกรรม(Innovative Classroom)", align = "center"),
+                        p("แอปพลิเคชันที่ส่งเสริมความเป็นชั้นเรียนนวัตกรรมของครูโดยจัดหาแหล่งเรียนรู้ให้ครูศึกษาตามการวิเคราะห์กลุ่มแฝง(latent class analysis)",
+                          align = "center", style="font-size:20px"),
+                        h2("การใช้งานแอปพลิเคชันส่งเสริมความเป็นชั้นเรียนนวัตกรรม"),
+                        h3("1. ทำแบบสอบถามเกี่ยวกับลักษณะชั้นเรียนและโรงเรียนของท่าน"),
+                        h3("2. ดูผลการวิเคราะห์ความเป็นชั้นเรียนนวัตกรรมของท่าน"),
+                        h3("3. ศึกษาแหล่งเรียนรู้จากการจัดกลุ่มความเป็นชั้นเรียนนวัตกรรม"),
+                        h3("4. ทำแบบประเมืนผลการใช้งานแอปพลิเคชัน")
+                    )
+            ),
+            # Second tab content
+            tabItem(tabName = "survey",
+                    fluidPage(  tags$style(type = "text/css",
+                                           "label { font-size: 20px}"),
+                                h2("แบบสอบถามลักษณะชั้นเรียนและโรงเรียน", align = "center"),
+                                fluidRow(
+                                    box(
+                                        h3("คำชี้แจง"),
+                                        p("โปรดอ่านและพิจารณาข้อความต่อไปนี้ และเลือกในช่องที่ตรงกับระดับพฤติกรรมตามรายการต่อไปนี้", style = "font-size:20px"),
+                                        p("     1  หมายถึง  มีพฤติกรรมน้อยที่สุด", style="font-size:20px"),
+                                        p("     2  หมายถึง  มีพฤติกรรมน้อย", style="font-size:20px"),
+                                        p("     3  หมายถึง  มีพฤติกรรมปานกลาง", style="font-size:20px"),
+                                        p("     4  หมายถึง  มีพฤติกรรมมาก", style="font-size:20px"),
+                                        p("     5  หมายถึง  มีพฤติกรรมมากที่สุด", style="font-size:20px"),width = NULL
+                                    )),
+                                p("ตอนที่ 1 นักเรียนในห้องของท่านมีพฤติกรรมต่อไปนี้มากน้อยเพียงใด", style = "font-size:24px"),
+                                p("1. หาคำตอบได้อย่างหลากหลาย และแปลกใหม่", style = "font-size:24px"),
+                                radioButtons("cre1", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("2. หาคำตอบได้เหมาะสมกับสถานการณ์ที่กำหนดได้อย่างรวดเร็ว", style = "font-size:24px"),
+                                radioButtons("cre2", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("3. คิดวิธีการแก้ปัญหาได้เหมาะสมกับสาเหตุของปัญหา", style = "font-size:24px"),
+                                radioButtons("sol1", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("4. เชื่อมโยงความรู้เดิมมาประยุกต์ใช้ในการแก้ปัญหา", style = "font-size:24px"),
+                                radioButtons("sol2", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("5. พยายามหาคำตอบเกี่ยวกับเรื่องที่เรียนไม่เข้าใจหรือมีข้อสงสัย", style = "font-size:24px"),
+                                radioButtons("ref1", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("6. นำข้อบกพร่องจากการทำงานมาปรับปรุงและพัฒนา", style = "font-size:24px"),
+                                radioButtons("ref2", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("7. ปรับตัวในการเรียนรู้ร่วมกับเพื่อนได้แม้มีความคิดแตกต่างกัน", style = "font-size:24px"),
+                                radioButtons("col1", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("8. กล้าเสนอความคิดเห็น และแลกเปลี่ยนกับเพื่อนได้อย่างสมเหตุสมผล", style = "font-size:24px"),
+                                radioButtons("col2", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("9. กำหนดเป้าหมายการเรียนรู้ และดำเนินตามแผนการทำงานร่วมกันในกลุ่ม ", style = "font-size:24px"),
+                                radioButtons("col3", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("ตอนที่ 2 ท่านมีพฤติกรรมในการจัดการเรียนรู้ต่อไปนี้มากน้อยเพียงใด", style = "font-size:24px"),
+                                p("1. ออกแบบการเรียนรู้ที่ส่งเสริมให้นักเรียนเกิดความคิดสร้างสรรค์ ", style = "font-size:24px"),
+                                radioButtons("cre3", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("2. กระตุ้นให้นักเรียนใช้วิธีการแก้ปัญหาที่หลากหลาย และแปลกใหม่", style = "font-size:24px"),
+                                radioButtons("sol3", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("3. เปิดโอกาสให้นักเรียนเลือกประเด็นในการแก้ปัญหาตามความสนใจ", style = "font-size:24px"),
+                                radioButtons("sol4", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("4. จัดกิจกรรมให้นักเรียนสะท้อนคิดจากการเรียนด้วยวิธีการที่หลากหลาย เช่น กระตุ้นให้นักเรียนตั้งคำถาม และให้นักเรียนทำแบบสะท้อนคิด", style = "font-size:24px"),
+                                radioButtons("ref3", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("5. หาวิธีการส่งเสริมจุดเด่น และพัฒนาจุดด้อยในการเรียนรู้ของนักเรียนแต่ละคน", style = "font-size:24px"),
+                                radioButtons("ref4", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("6. กระตุ้นให้นักเรียนทุกคนมีส่วนร่วมในการแลกเปลี่ยนความคิดเห็น", style = "font-size:24px"),
+                                radioButtons("col4", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                p("7. แนะนำแนวทางการหาคำตอบเพื่อให้นักเรียนสร้างองค์ความรู้และแก้ปัญหาร่วมกัน", style = "font-size:24px"),
+                                radioButtons("col5", label = NULL,
+                                             choices = list("1) น้อยที่สุด" = 1, "2) น้อย" = 2, "3) ปานกลาง" = 3, 
+                                                            "4) มาก" = 4, "5) มากที่สุด" = 5)),
+                                fluidRow(actionButton("add", "Submit", style='padding:10px; font-size:150%'),align="center"),
+                    ),
+                    
+            ),
+            # third tab content
+            tabItem(tabName = "analyze",
+                    h2("ผลการวิเคราะห์ความเป็นชั้นเรียนนวัตกรรม", align = "center"),
+                    span(textOutput("class"), style="font-size:24px"),
+                    h3("คะแนนเฉลี่ยนในแต่ละด้าน"),
+                    plotlyOutput("plot"),
+            ),
+            # fourth tab content
+            tabItem(tabName = "resource",
+                    h2("แหล่งเรียนรู้", align="center"),
+                    span(textOutput("class2"), style="font-size:24px"),
+                    fluidPage(DT::dataTableOutput("table")),
+                    fluidRow(span(uiOutput("download"), style="font-size:30px"), align="center"),
+                    fluidRow(h2("วิธีการดาวน์โหลด: ไฟล์ -> ดาวน์โหลด -> PDF", style="font-size:20px"))
+            ),
+            # fifth tab content
+            tabItem(tabName = "evaluate",
+                    h2("ประเมินผลการใช้งาน",align="center"),
+                    h2("ส่วนที่ 1 ข้อมูลทั่วไปผู้ตอบแบบสอบถาม"),
+                    radioButtons("gender", label = "1) เพศ",
+                                 choices = list("ชาย" = 1, "หญิง" = 2)),
+                    radioButtons("degree", label = "2) วุฒิการศึกษา",
+                                 choices = list("ปริญญาตรี" = 1, "ปริญญาโท" = 2, "ปริญญาเอก" = 3)),
+                    selectInput("position", label = h3("3) ตำแหน่งทางวิชาการ"), 
+                                choices = list("ครูผู้ช่วย" = 1, "พนักงานราชการ" = 2, "ครูผู้ช่วย" = 3,
+                                               "ครูค.ศ.1" = 4, "ครูค.ศ.2" = 5, "ครูค.ศ.3" = 6, "ครูค.ศ.4" = 7), 
+                                selected = 1),
+                    radioButtons("size", label = "4) ขนาดของโรงเรียน",
+                                 choices = list("ขนาดเล็ก" = 1, "ขนาดกลาง" = 2, "ขนาดใหญ่" = 3, "ขนาดใหญ่พิเศษ" = 4)),
+                    selectInput("experience", label = h3("5) ประสบการณ์สอนในโรงเรียน"), 
+                                choices = list("ต่ำกว่า 5 ปี"= 1, "5 - 9 ปี" = 2, "10 - 14 ปี" = 3,
+                                               "15 - 19 ปี"= 4, "20 - 24 ปี" = 5, "25 ปีขึ้นไป" = 6),
+                                selected = 1),
+                    selectInput("subject", label = h3("6) กลุ่มสาระการเรียนรู้ที่สอน"), 
+                                choices = list("ภาษาไทย"= 1, "คณิตศาสตร์" = 2, "วิทยาศาสตร์และเทคโนโลยี" = 3,
+                                               "ภาษาอังกฤษ"= 4, "สังคมศึกษา" = 5, "การงานอาชีพ" = 6,
+                                               "ศิลปะ"=7,"สุขศึกษาและพละศึกษา"=8),
+                                selected = 1),
+                    selectInput("techno", label = h3("7) การเข้าร่วมอบรมการใช้เทคโนโลยีในการจัดการเรียนการสอนในรอบ 1 ปีที่ผ่านมา"), 
+                                choices = list("1 - 3 ครั้ง" = 1, "4 - 6 ครั้ง" = 2, "7 - 9 ครั้ง" = 3,
+                                               "10 - 12 ครั้ง" = 4, "มากกว่า 12 ครั้ง" = 5), 
+                                selected = 1),
+                    h3("ส่วนที่ 2 ประเมินผลการใช้งาน"),
+                    p("คำชี้แจง โปรดอ่านและพิจารณาข้อความต่อไปนี้ และเลือกในช่องที่ตรงกับความคิดเห็นของท่าน", style="font-size:24px"),
+                    p("ด้านความพึงพอใจในการใช้งาน",style="font-size:24px"),
+                    fluidRow(
+                        column(2, h3("ใช้งานยาก"), align = "right"),
+                        column(4, sliderInput("sat1", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("ใช้งานง่าย"))
+                    ),
+                    fluidRow(
+                        column(2, h3("นำเสนอข้อมูลเข้าใจยาก"), align = "right"),
+                        column(4, sliderInput("sat2", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("นำเสนอข้อมูลเข้าใจง่าย"))
+                    ),
+                    fluidRow(
+                        column(2, h3("น่าเบื่อ"), align = "right"),
+                        column(4, sliderInput("sat3", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("น่าสนใจ"))
+                    ),
+                    fluidRow(
+                        column(2, h3("ไม่ชอบ"), align = "right"),
+                        column(4, sliderInput("sat3", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("ชอบ"))
+                    ),
+                    h2("ด้านประโยชน์ของการใช้งาน",style="font-size:24px"),
+                    fluidRow(
+                        column(2, h3("ใช้งานไม่ได้จริง"), align = "right"),
+                        column(4, sliderInput("adv1", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("ใช้งานได้จริง"))
+                    ),
+                    fluidRow(
+                        column(2, h3("สิ้นเปลือง"), align = "right"),
+                        column(4, sliderInput("adv2", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("คุ้มค่า"))
+                    ),
+                    fluidRow(
+                        column(2, h3("ไร้ประโยชน์"), align = "right"),
+                        column(4, sliderInput("adv3", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("มีประโยชน์"))
+                    ),
+                    h2("ด้านประสิทธิภาพการส่งเสริมความเป็นชั้นเรียนนวัตกรรม",style="font-size:24px"),
+                    fluidRow(
+                        column(2, h3("ไม่ตรงประเด็น"), align = "right"),
+                        column(4, sliderInput("eff1", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("ตรงประเด็น"))
+                    ),
+                    fluidRow(
+                        column(2, h3("ไม่เหมาะสม"), align = "right"),
+                        column(4, sliderInput("eff2", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("เหมาะสม"))
+                    ),
+                    fluidRow(
+                        column(2, h3("ไม่ครอบคลุม"), align = "right"),
+                        column(4, sliderInput("eff3", label = NULL, min = 1, max = 7, value = 4, width = "100%")),
+                        column(2, h3("ครอบคลุม"))
+                    ),
+                    fluidRow(
+                        textInput("feedback", label = h3("ข้อเสนอแนะในการปรับปรุงและพัฒนา"), value = "พิมพ์ข้อความ...",width="80%")
+                    ),
+                    fluidRow(actionButton("evabutton", "Submit", style='padding:10px; font-size:150%'),align="center"))
+        )
+        
+    )
+)
+
+
+
+server <- function(input, output,session) { 
+    #plot
+    output$plot<-renderPlotly({
+        cre11<-as.numeric(input$cre1)
+        cre22<-as.numeric(input$cre2)
+        cre33<-as.numeric(input$cre3)
+        cre<-(cre11+cre22+cre33)/3
+        sol11<-as.numeric(input$sol1)
+        sol22<-as.numeric(input$sol2)
+        sol33<-as.numeric(input$sol3)
+        sol44<-as.numeric(input$sol4)
+        sol<-(sol11+sol22+sol33+sol44)/4
+        ref11<-as.numeric(input$ref1)
+        ref22<-as.numeric(input$ref2)
+        ref33<-as.numeric(input$ref3)
+        ref44<-as.numeric(input$ref4)
+        ref<-mean(ref11+ref22+ref33+ref44)/4
+        col11<-as.numeric(input$col1)
+        col22<-as.numeric(input$col2)
+        col33<-as.numeric(input$col3)
+        col44<-as.numeric(input$col4)
+        col55<-as.numeric(input$col5)
+        col<-(col11+col22+col33+col44+col55)/5
+        plot_ly(x = list(col, ref, sol, cre), y = list("การร่วมมือรวมพลัง",
+                                                       "การสะท้อนคิด","การแก้ปัญหา", "ความคิดสร้างสรรค์"), type = 'bar', orientation = 
+                    'h')%>%layout(font=list(size=20), xaxis = list(range = c(0,5)))
+    })
+    
+    lca <- reactive({
+        as.data.frame(t(as.data.frame(as.numeric(c(input$cre1, input$cre2, input$sol1, input$sol2, input$ref1, 
+                                                   input$ref2, input$col1, input$col2, input$col3, input$cre3,
+                                                   input$sol3, input$sol4, input$ref3, input$ref4, input$col4, input$col5)))))
+    })
+    
+    class3<-read_sheet("https://docs.google.com/spreadsheets/d/1CdyjvYrCXBoIetBhA5lXxApW9TYbRh_m5n8TxKVLZDs/edit#gid=0")
+    class2<-read_sheet("https://docs.google.com/spreadsheets/d/1s_knN34C-f2x7ojDfAhHenKukVKUBW4bcsPgACyHLDc/edit#gid=0")
+    class1<-read_sheet("https://docs.google.com/spreadsheets/d/1sBZ6Iq5dpwPW28UPXnXHTPeLGFBhS6KIJqcYqcFQteU/edit#gid=0")
+    
+    observeEvent(input$add, {
+        lca2 <-   gs4_get('https://docs.google.com/spreadsheets/d/1a1lKSGZFc_4X2mUhcuF20c79Wm06uFV10oILQSSqKzA/edit#gid=0')
+        sheet_append(lca2, data = lca())
+    })
+    datlca<-read_sheet("https://docs.google.com/spreadsheets/d/1a1lKSGZFc_4X2mUhcuF20c79Wm06uFV10oILQSSqKzA/edit#gid=0")
+    model<-estimate_profiles(datlca, 3)
+    model2<-as.data.frame(get_data(model))
+    model3<-tail(model2[22], n=1)
+    model4<-as.numeric(model3)
+    model5<-recode(model4, "3" = "ครูล้าหลังทางนวัตกรรม", "2" = "ครูเริ่มต้นความเป็นนวัตกร", "1"="ครูพัฒนานวัตกร")
+    output$class <- renderText({paste("ท่านจัดอยู่ในกลุ่ม:", model5)})
+    output$class2 <- renderText({paste("แหล่งเรียนรู้สำหรับ:",model5)})
+    
+    #output$class <- renderText({print(model4)})
+    
+    eva <- reactive({
+        as.data.frame(t(as.data.frame(c(input$gender, input$degree, input$position, input$size,
+                                        input$experience, input$subject, input$techno,
+                                        input$sat1, input$sat2, input$sat3, input$adv1,
+                                        input$adv2, input$adv3, input$eff1, input$eff2, input$eff3,
+                                        input$feedback))))
+    })
+    
+    observeEvent(input$evabutton, {
+        eva2 <-   gs4_get('https://docs.google.com/spreadsheets/d/1aFoZG2ADuub1BZuGDncGkSEWzyYlTFJ10Lwldmlu42Y/edit#gid=0')
+        sheet_append(eva2, data = eva())
+    })
+    
+    
+    output$table <- DT::renderDataTable({
+        if(model3=="1"){datatable(class1, escape = FALSE)}
+        else if(model3=="2"){datatable(class2, escape = FALSE)}
+        else{datatable(class3, escape = FALSE)}
+    })
+    
+    
+    url1<-a("ดาวน์โหลดแหล่งเรียนรู้",href="https://docs.google.com/spreadsheets/d/1jWf9_lvlpvpWD92BR6w1QcE5J3NFQi95Bd7iL6uNXYA/edit#gid=0")
+    url2<-a("ดาวน์โหลดแหล่งเรียนรู้",href="https://docs.google.com/spreadsheets/d/16TSeXzA2TqGZMNP1UaTf3tLX7pGAg7EQslCcGJKhl34/edit#gid=0")
+    url3<-a("ดาวน์โหลดแหล่งเรียนรู้",href="https://docs.google.com/spreadsheets/d/1JOfwMOCCEk2D28UelsywUArF-QsL7oAjQVTTpTzhQSE/edit#gid=0")
+    
+    output$download <- renderUI({
+        if(model3=="1"){tagList(url1)}
+        else if(model3=="2"){tagList(url2)}
+        else{tagList(url3)}
+        
+    })  
+    
+}
+
+shinyApp(ui, server)
+
